@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+
+'use strict';
+
+const packageJson = require('../package.json');
+const program = require('commander');
+const DownloadSticker = require('../index');
+const logger = require('../logger')(true);
+
+function handleStickerName(val){
+    const regex = /^(https?:\/\/)t\.me\/addstickers\//;
+    const name = new Array();
+    return val.split(',').filter(link => {
+        if (!link.trim()) return false;
+        if (regex.test(link)) {
+            return true;
+        } else {
+            name.push(link);
+            return false;
+        }
+    }).map(link => {
+        return link.replace(regex, '');
+    }).concat(name)
+}
+
+program
+    .version(packageJson.version, '-v, --version')
+    .option('-t, --token [token]', 'Your telegram token, apply for token here at https://t.me/BotFather')
+    .option('-s, --sticker <items...>', 'Telegram sticker link or name, Use "," to separate', handleStickerName, [])
+    .option('-c, --compression [type]', 'Compression method {tar|gzip|tgz|zip}', /^(tar|gzip|tgz|zip)$/i, false)
+    .option('-o, --output [path]', 'Sticker saved folder', './')
+    .option('-w, --webp', 'Use webp format')
+    .parse(process.argv);
+
+if (process.argv.length <= 2) return logger.error('Use "-h" to view help');
+if (!program.token) return logger.error('Add telegram token with "-t"');
+if (!program.name.length && !program.link.length) return logger.error('Add a telegram sticker using "-l" or "-n"');
+
+const options = {
+    token: program.token,
+    sticker: program.sticker,
+    compression: program.compression,
+    output: program.output,
+    webp: program.webp,
+    cli: true
+}
+
+DownloadSticker(options).then(e => {
+    logger.info('Download stickers successfully: \n' + e.map(e => 'Saved in ==> ' + e).join('\n'))
+}).catch(err => {
+    logger.error('Download stickers failed: ' + err);
+});
